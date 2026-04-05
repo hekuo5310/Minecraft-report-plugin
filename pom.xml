@@ -18,24 +18,19 @@
     </properties>
 
     <repositories>
-        <!-- BungeeCord Releases -->
+        <!-- JitPack - BungeeCord -->
         <repository>
-            <id>sonatype-releases</id>
-            <url>https://oss.sonatype.org/content/repositories/releases/</url>
-        </repository>
-        <!-- BungeeCord Snapshots -->
-        <repository>
-            <id>sonatype-snapshots</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
         </repository>
     </repositories>
 
     <dependencies>
-        <!-- BungeeCord API -->
+        <!-- BungeeCord API via JitPack -->
         <dependency>
-            <groupId>net.md-5</groupId>
-            <artifactId>bungeecord-api</artifactId>
-            <version>1.19-R0.1-SNAPSHOT</version>
+            <groupId>com.github.SpigotMC</groupId>
+            <artifactId>BungeeCord</artifactId>
+            <version>master-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
