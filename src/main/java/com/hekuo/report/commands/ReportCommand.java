@@ -1,364 +1,261 @@
 package com.hekuo.report.commands;
 
 import com.hekuo.report.HekuoReport;
+import com.hekuo.report.managers.ReportManager;
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.CommandSender;
+import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
-import org.bukkit.Bukkit;
-import org.bukkit.BanList;
-import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
+import net.md_5.bungee.api.chat.hover.content.Text;
+import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.md_5.bungee.api.plugin.Command;
+import net.md_5.bungee.api.plugin.TabExecutor;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
-public class ReportCommand implements CommandExecutor, Listener {
+public class ReportCommand extends Command implements TabExecutor {
 
     private final HekuoReport plugin;
-    private final Map<UUID, BanType> pendingBans = new HashMap<>();
+    private final ReportManager reportManager;
+    private static final String PREFIX = ChatColor.GRAY + "[" + ChatColor.RED + "举报" + ChatColor.GRAY + "] ";
 
-    public ReportCommand(HekuoReport plugin) {
+    public ReportCommand(HekuoReport plugin, String name) {
+        super(name);
         this.plugin = plugin;
+        this.reportManager = plugin.getReportManager();
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
-            return sendHelp(sender);
-        }
-
-        // 管理员子命令
-        switch (args[0].toLowerCase()) {
-            case "check":
-                return handleCheckCommand(sender);
-
-            case "logs":
-                return handleLogsCommand(sender, args);
-
-            case "ban":
-                return handleBanCommand(sender, args);
-
-            case "page":
-                return handlePageCommand(sender, args);
-
-            case "attackpage":
-                return handleLogPageCommand(sender, args, "attack");
-
-            case "minepage":
-                return handleLogPageCommand(sender, args, "mine");
-
-            default:
-                break; // 跳转到举报提交
-        }
-
-        // 举报提交: /report <玩家名称> <理由>
-        if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "用法: /report <玩家名称> <理由>");
-            sender.sendMessage(ChatColor.GRAY + "输入 /report help 查看更多命令");
-            return true;
-        }
-
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "只有玩家才能使用此命令");
-            return true;
-        }
-
-        Player reporter = (Player) sender;
-        String targetName = args[0];
-        StringBuilder reasonBuilder = new StringBuilder();
-        for (int i = 1; i < args.length; i++) {
-            reasonBuilder.append(args[i]).append(" ");
-        }
-        String reason = reasonBuilder.toString().trim();
-
-        plugin.getReportManager().addReport(targetName, reporter.getName(), reason);
-        reporter.sendMessage(ChatColor.GREEN + "你对 " + ChatColor.YELLOW + targetName + 
-                          ChatColor.GREEN + " 的举报已提交! 理由: " + ChatColor.WHITE + reason);
-
-        notifyAdmins(reporter.getName(), targetName, reason);
-        return true;
-    }
-
-    // ========== 帮助信息 ==========
-
-    private boolean sendHelp(CommandSender sender) {
-        sender.sendMessage(ChatColor.GOLD + "=== " + ChatColor.BOLD + "hekuo举报插件" + ChatColor.GOLD + " ===");
-        sender.sendMessage("");
-        sender.sendMessage(ChatColor.YELLOW + "玩家命令:");
-        sender.sendMessage(ChatColor.WHITE + "  /report <玩家> <理由>" + ChatColor.GRAY + " - 举报玩家");
-        sender.sendMessage("");
-        if (sender.hasPermission("report.admin")) {
-            sender.sendMessage(ChatColor.RED + "管理员命令:");
-            sender.sendMessage(ChatColor.WHITE + "  /report check" + ChatColor.GRAY + " - 查看和管理举报");
-            sender.sendMessage(ChatColor.WHITE + "  /report logs <玩家>" + ChatColor.GRAY + " - 查看行为和检测结果");
-            sender.sendMessage(ChatColor.WHITE + "  /report ban <玩家> <perm|day|hour>" + ChatColor.GRAY + " - 封禁玩家");
-            sender.sendMessage(ChatColor.WHITE + "  /report page <页码>" + ChatColor.GRAY + " - 跳转页面");
-        }
-        sender.sendMessage("");
-        sender.sendMessage(ChatColor.GOLD + "作者: hekuo");
-        return true;
-    }
-
-    // ========== 管理员命令处理 ==========
-
-    private boolean handleCheckCommand(CommandSender sender) {
-        if (!hasAdminPerm(sender)) return true;
-        plugin.getReportManager().showReports(sender, 0);
-        return true;
-    }
-
-    private boolean handleLogsCommand(CommandSender sender, String[] args) {
-        if (!hasAdminPerm(sender)) return true;
-        if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "用法: /report logs <玩家>");
-            return true;
-        }
-        plugin.getReportManager().showLogs(sender, args[1], 0);
-        return true;
-    }
-
-    private boolean handleBanCommand(CommandSender sender, String[] args) {
-        if (!hasAdminPerm(sender)) return true;
-        if (args.length < 3) {
-            sender.sendMessage(ChatColor.RED + "用法: /report ban <玩家> <perm|day|hour>");
-            return true;
-        }
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "只有玩家能使用此交互命令");
-            return true;
-        }
-
-        String targetName = args[1];
-        String banType = args[2];
-
-        if (!banType.equalsIgnoreCase("perm") && 
-            !banType.equalsIgnoreCase("day") && 
-            !banType.equalsIgnoreCase("hour")) {
-            sender.sendMessage(ChatColor.RED + "无效的封禁类型，请使用: perm(永久), day(天), hour(小时)");
-            return true;
-        }
-
-        plugin.getReportManager().initiateBan((Player) sender, targetName, banType.toLowerCase());
-        return true;
-    }
-
-    private boolean handlePageCommand(CommandSender sender, String[] args) {
-        if (!hasAdminPerm(sender)) return true;
-        int page = 0;
-        if (args.length >= 2) {
-            try {
-                page = Integer.parseInt(args[1]);
-            } catch (NumberFormatException e) {
-                sender.sendMessage(ChatColor.RED + "无效的页码");
-                return true;
-            }
-        }
-        plugin.getReportManager().showReports(sender, page);
-        return true;
-    }
-
-    private boolean handleLogPageCommand(CommandSender sender, String[] args, String logType) {
-        if (!hasAdminPerm(sender)) return true;
-        if (args.length < 3) {
-            sender.sendMessage(ChatColor.RED + "用法: /report " + logType + "page <玩家> <页码>");
-            return true;
-        }
-        int page = 0;
-        try {
-            page = Integer.parseInt(args[2]);
-        } catch (NumberFormatException e) {
-            sender.sendMessage(ChatColor.RED + "无效的页码");
-            return true;
-        }
-        plugin.getReportManager().showLogs(sender, args[1], page);
-        return true;
-    }
-
-    private boolean hasAdminPerm(CommandSender sender) {
-        if (!sender.hasPermission("report.admin")) {
-            sender.sendMessage(ChatColor.RED + "你没有权限使用此命令!");
-            return false;
-        }
-        return true;
-    }
-
-    // ========== 管理员通知 ==========
-
-    private void notifyAdmins(String reporter, String target, String reason) {
-        TextComponent message = new TextComponent(
-            ChatColor.RED + "[举报] " + ChatColor.YELLOW + reporter + 
-            ChatColor.WHITE + " 举报了 " + ChatColor.RED + target + 
-            ChatColor.WHITE + ", 原因: " + ChatColor.GOLD + reason + " "
-        );
-
-        TextComponent checkBtn = new TextComponent("[查看]");
-        checkBtn.setColor(net.md_5.bungee.api.ChatColor.GREEN);
-        checkBtn.setBold(true);
-        checkBtn.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
-            new ComponentBuilder("点击查看举报列表").create()));
-        checkBtn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/report check"));
-        message.addExtra(checkBtn);
-
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (player.hasPermission("report.admin")) {
-                player.spigot().sendMessage(message);
-            }
-        }
-    }
-
-    // ========== 封禁执行 (点击封禁按钮后通过聊天输入时长) ==========
-
-    @EventHandler
-    public void onChat(AsyncPlayerChatEvent event) {
-        Player player = event.getPlayer();
-        UUID uuid = player.getUniqueId();
-
-        if (!pendingBans.containsKey(uuid)) return;
-        
-        event.setCancelled(true);
-        BanType banType = pendingBans.remove(uuid);
-        String input = event.getMessage().trim().toLowerCase();
-
-        // 取消选项
-        if (input.equals("cancel") || input.equals("取消")) {
-            player.sendMessage(ChatColor.YELLOW + "封禁操作已取消");
+    public void execute(CommandSender sender, String[] args) {
+        // 无参数 - 显示帮助
+        if (args.length == 0) {
+            sendHelp(sender);
             return;
         }
 
+        // help 命令
+        if (args[0].equalsIgnoreCase("help")) {
+            sendHelp(sender);
+            return;
+        }
+
+        // 管理员命令: /report check
+        if (args[0].equalsIgnoreCase("check")) {
+            if (!sender.hasPermission("report.admin")) {
+                sender.sendMessage(new TextComponent(PREFIX + ChatColor.RED + "你没有权限使用此命令!"));
+                return;
+            }
+            reportManager.showReportList((ProxiedPlayer) sender, 1);
+            return;
+        }
+
+        // 举报命令: /report <玩家名称> <理由>
+        if (args.length < 2) {
+            sender.sendMessage(new TextComponent(PREFIX + ChatColor.RED + "用法: /report <玩家名称> <理由>"));
+            return;
+        }
+
+        if (!(sender instanceof ProxiedPlayer)) {
+            sender.sendMessage(new TextComponent(PREFIX + ChatColor.RED + "只有玩家才能执行此命令!"));
+            return;
+        }
+
+        String targetName = args[0];
+        StringBuilder reason = new StringBuilder();
+        for (int i = 1; i < args.length; i++) {
+            reason.append(args[i]).append(" ");
+        }
+
+        submitReport((ProxiedPlayer) sender, targetName, reason.toString().trim());
+    }
+
+    /**
+     * 提交举报
+     */
+    private void submitReport(ProxiedPlayer reporter, String targetName, String reason) {
+        // 检查被举报玩家是否在线
+        ProxiedPlayer target = getProxy().getPlayer(targetName);
+
+        String finalTargetName = targetName;
+        if (target != null) {
+            finalTargetName = target.getName(); // 使用正确的大小写
+
+            // 不能举报自己
+            if (target.getUniqueId().equals(reporter.getUniqueId())) {
+                reporter.sendMessage(new TextComponent(PREFIX + ChatColor.RED + "你不能举报自己!"));
+                return;
+            }
+        }
+
+        long now = System.currentTimeMillis();
+
+        // 添加举报记录
+        reportManager.addReport(
+            finalTargetName,
+            reporter.getName(),
+            reason,
+            now,
+            target != null ? target.getServer().getInfo().getName() : "未知"
+        );
+
+        // 通知举报人
+        reporter.sendMessage(new TextComponent(PREFIX + ChatColor.GREEN +
+            "举报已提交! 被举报人: " + ChatColor.YELLOW + finalTargetName +
+            ChatColor.GREEN + ", 理由: " + ChatColor.YELLOW + reason));
+
+        // 通知所有在线管理员
+        notifyAdmins(reporter.getName(), finalTargetName, reason);
+    }
+
+    /**
+     * 通知在线管理员有新举报
+     */
+    private void notifyAdmins(String reporterName, String targetName, String reason) {
+        TextComponent notifyMsg = new TextComponent(PREFIX + ChatColor.RED + "新举报! ");
+        
+        TextComponent clickHint = new TextComponent(ChatColor.YELLOW + "[点击查看]");
+        clickHint.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/report check"));
+        clickHint.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+            new Text(ChatColor.GRAY + "点击查看所有举报")));
+
+        notifyMsg.addExtra(clickHint);
+
+        for (ProxiedPlayer player : getProxy().getPlayers()) {
+            if (player.hasPermission("report.admin")) {
+                player.sendMessage(notifyMsg);
+            }
+        }
+    }
+
+    /**
+     * 显示帮助信息
+     */
+    private void sendHelp(CommandSender sender) {
+        sender.sendMessage(new TextComponent(""));
+        sender.sendMessage(new TextComponent(ChatColor.RED + "====== " + ChatColor.BOLD + "hekuo举报系统" + ChatColor.RESET + ChatColor.RED + " ======"));
+        sender.sendMessage(new TextComponent(""));
+        
+        // 帮助标题行
+        sender.sendMessage(new TextComponent(ChatColor.GOLD + "命令列表:"));
+        sender.sendMessage(new TextComponent(ChatColor.YELLOW + "  /report <玩家> <理由>" + ChatColor.WHITE + " - 举报指定玩家"));
+        sender.sendMessage(new TextComponent(ChatColor.YELLOW + "  /report help" + ChatColor.WHITE + " - 显示此帮助信息"));
+        
+        if (sender.hasPermission("report.admin")) {
+            sender.sendMessage(new TextComponent(""));
+            sender.sendMessage(new TextComponent(ChatColor.RED + "管理员命令:"));
+            sender.sendMessage(new TextComponent(ChatColor.YELLOW + "  /report check" + ChatColor.WHITE + " - 查看/处理举报列表"));
+        }
+        
+        sender.sendMessage(new TextComponent(""));
+        sender.sendMessage(new TextComponent(ChatColor.GRAY + "开发者: hekuo"));
+        sender.sendMessage(new TextComponent(""));
+    }
+
+    /**
+     * 处理封禁时长输入（通过聊天消息）
+     */
+    public boolean handleBanInput(ProxiedPlayer player, String message) {
+        if (!reportManager.isWaitingForBanInput(player.getUniqueId())) {
+            return false;
+        }
+
+        BanType banType = reportManager.getPlayerPendingBanType(player.getUniqueId());
+        String targetName = reportManager.getPlayerPendingBanTarget(player.getUniqueId());
+
         try {
-            long duration = Long.parseLong(event.getMessage().trim());
-            if (duration <= 0) {
-                player.sendMessage(ChatColor.RED + "请输入一个正数");
-                pendingBans.put(uuid, banType); // 重新添加以便重试
-                return;
+            double value = Double.parseDouble(message.replace(",", "."));
+
+            if (value <= 0) {
+                player.sendMessage(new TextComponent(PREFIX + ChatColor.RED + "请输入一个大于0的数字!"));
+                return true;
             }
 
-            String targetName = banType.getTargetName();
-            Player target = Bukkit.getPlayerExact(targetName);
+            switch (banType) {
+                case DAYS:
+                    executeTempBan(player, targetName, value * 24 * 3600000L,
+                        "封禁 " + (int)value + " 天");
+                    break;
+                case HOURS:
+                    executeTempBan(player, targetName, value * 3600000L,
+                        "封禁 " + (int)value + " 小时");
+                    break;
+                default:
+                    break;
+            }
             
-            if (target != null && target.isOnline()) {
-                executeBan(player, target, banType.getType(), duration);
-            } else {
-                offlineBan(player, targetName, banType.getType(), duration);
-            }
+            reportManager.clearWaitingForBanInput(player.getUniqueId());
+
         } catch (NumberFormatException e) {
-            player.sendMessage(ChatColor.RED + "输入无效，请输入数字或 输入 取消 来中止操作");
-            pendingBans.put(uuid, banType); // 重新添加以便重试
+            player.sendMessage(new TextComponent(PREFIX + ChatColor.RED + "无效数字! 请输入一个有效的数字，或输入 'cancel' 取消。"));
         }
+        return true;
     }
 
-    private void executeBan(Player admin, Player target, String type, long amount) {
-        String adminName = admin.getName();
-        String targetName = target.getName();
+    /**
+     * 执行临时封禁
+     */
+    private void executeTempBan(ProxiedPlayer admin, String playerName, long durationMs, String durationText) {
+        ProxiedPlayer target = getProxy().getPlayer(playerName);
         
-        switch (type.toLowerCase()) {
-            case "perm": {
-                Bukkit.getBanList(BanList.Type.NAME).addBan(targetName,
-                    "被 " + adminName + " 永久封禁", null, adminName);
-                target.kickPlayer("你已被永久封禁!\n操作者: " + adminName);
-                Bukkit.broadcast(ChatColor.RED + "[封禁] " + ChatColor.YELLOW + adminName + 
-                                ChatColor.WHITE + " 永久封禁了 " + ChatColor.RED + targetName, 
-                                "report.admin");
-                break;
+        String kickMessage = "\n" + ChatColor.RED + "========== 封禁通知 ==========\n" +
+            ChatColor.GRAY + "你已被服务器封禁\n" +
+            ChatColor.GRAY + "原因: " + ChatColor.RED + "管理员操作处理举报\n" +
+            ChatColor.GRAY + "时长: " + ChatColor.YELLOW + durationText + "\n" +
+            ChatColor.GRAY + "操作者: " + ChatColor.YELLOW + admin.getName() + "\n" +
+            ChatColor.RED + "================================\n";
+
+        // 在线玩家直接踢出
+        if (target != null) {
+            target.disconnect(new TextComponent(kickMessage));
+            getProxy().getServers().values().forEach(serverInfo -> 
+                serverInfo.sendData("hekuo:ban", (playerName + "|" + System.currentTimeMillis() + durationMs).getBytes()));
+        }
+
+        admin.sendMessage(new TextComponent(PREFIX + ChatColor.GREEN +
+            "已封禁玩家 " + ChatColor.YELLOW + playerName + ChatColor.GREEN +
+            ", 时长: " + ChatColor.YELLOW + durationText));
+    }
+
+    /**
+     * 执行永久封禁
+     */
+    public void executePermBan(ProxiedPlayer admin, String playerName) {
+        ProxiedPlayer target = getProxy().getPlayer(playerName);
+
+        String kickMessage = "\n" + ChatColor.RED + "========== 永久封禁通知 ==========\n" +
+            ChatColor.GRAY + "你已被服务器永久封禁\n" +
+            ChatColor.GRAY + "原因: " + ChatColor.RED + "管理员操作处理举报\n" +
+            ChatColor.GRAY + "操作者: " + ChatColor.YELLOW + admin.getName() + "\n" +
+            ChatColor.RED + "====================================\n";
+
+        if (target != null) {
+            target.disconnect(new TextComponent(kickMessage));
+            getProxy().getServers().values().forEach(serverInfo -> 
+                serverInfo.sendData("hekuo:ban", (playerName + "|perm").getBytes()));
+        }
+
+        admin.sendMessage(new TextComponent(PREFIX + ChatColor.GREEN +
+            "已永久封禁玩家 " + ChatColor.YELLOW + playerName));
+    }
+
+    @Override
+    public Iterable<String> onTabComplete(CommandSender sender, String[] args) {
+        List<String> completions = new ArrayList<>();
+        
+        if (args.length == 1) {
+            if (sender.hasPermission("report.admin")) {
+                completions.add("check");
+                completions.add("help");
+            } else {
+                completions.add("<玩家名称>");
             }
-            case "day": {
-                long expiryMs = System.currentTimeMillis() + (amount * 24 * 60 * 60 * 1000L);
-                Date expiryDate = new Date(expiryMs);
-                Bukkit.getBanList(BanList.Type.NAME).addBan(targetName,
-                    "被 " + adminName + " 封禁 " + amount + " 天", expiryDate, adminName);
-                target.kickPlayer("你已被封禁 " + amount + " 天!\n操作者: " + adminName);
-                Bukkit.broadcast(ChatColor.RED + "[封禁] " + ChatColor.YELLOW + adminName + 
-                                ChatColor.WHITE + " 封禁了 " + ChatColor.RED + targetName + 
-                                ChatColor.WHITE + " " + amount + " 天", "report.admin");
-                break;
-            }
-            case "hour": {
-                long expiryMs = System.currentTimeMillis() + (amount * 60 * 60 * 1000L);
-                Date expiryDate = new Date(expiryMs);
-                Bukkit.getBanList(BanList.Type.NAME).addBan(targetName,
-                    "被 " + adminName + " 封禁 " + amount + " 小时", expiryDate, adminName);
-                target.kickPlayer("你已被封禁 " + amount + " 小时!\n操作者: " + adminName);
-                Bukkit.broadcast(ChatColor.RED + "[封禁] " + ChatColor.YELLOW + adminName + 
-                                ChatColor.WHITE + " 封禁了 " + ChatColor.RED + targetName + 
-                                ChatColor.WHITE + " " + amount + " 小时", "report.admin");
-                break;
-            }
-            default:
-                admin.sendMessage(ChatColor.RED + "无效的封禁类型");
-                return;
         }
         
-        // 标记举报已处理
-        plugin.getReportManager().markHandled(0);
-    }
-
-    private void offlineBan(Player admin, String targetName, String type, long amount) {
-        String adminName = admin.getName();
-        
-        switch (type.toLowerCase()) {
-            case "perm":
-                Bukkit.getBanList(BanList.Type.NAME).addBan(targetName, 
-                    "被 " + adminName + " 永久封禁", null, adminName);
-                Bukkit.broadcast(ChatColor.RED + "[封禁] " + ChatColor.YELLOW + adminName + 
-                                ChatColor.WHITE + " 永久封禁了 " + ChatColor.RED + targetName + 
-                                ChatColor.WHITE + " (离线)", "report.admin");
-                break;
-            case "day": {
-                long expiryMs = System.currentTimeMillis() + (amount * 24 * 60 * 60 * 1000L);
-                Date expiryDate = new Date(expiryMs);
-                Bukkit.getBanList(BanList.Type.NAME).addBan(targetName, 
-                    "被 " + adminName + " 封禁 " + amount + " 天", expiryDate, adminName);
-                Bukkit.broadcast(ChatColor.RED + "[封禁] " + ChatColor.YELLOW + adminName + 
-                                ChatColor.WHITE + " 封禁了 " + ChatColor.RED + targetName + 
-                                ChatColor.WHITE + " " + amount + " 天 (离线)", "report.admin");
-                break;
-            }
-            case "hour": {
-                long expiryMs = System.currentTimeMillis() + (amount * 60 * 60 * 1000L);
-                Date expiryDate = new Date(expiryMs);
-                Bukkit.getBanList(BanList.Type.NAME).addBan(targetName, 
-                    "被 " + adminName + " 封禁 " + amount + " 小时", expiryDate, adminName);
-                Bukkit.broadcast(ChatColor.RED + "[封禁] " + ChatColor.YELLOW + adminName + 
-                                ChatColor.WHITE + " 封禁了 " + ChatColor.RED + targetName + 
-                                ChatColor.WHITE + " " + amount + " 小时 (离线)", "report.admin");
-                break;
-            }
-            default:
-                admin.sendMessage(ChatColor.RED + "无效的封禁类型");
-                return;
-        }
-
-        Player onlineTarget = Bukkit.getPlayerExact(targetName);
-        if (onlineTarget != null && onlineTarget.isOnline()) {
-            onlineTarget.kickPlayer("你已被服务器封禁!");
-        }
-    }
-
-    // ========== 公开API ==========
-
-    public void addPendingBan(UUID uuid, BanType banType) {
-        pendingBans.put(uuid, banType);
-    }
-
-    public static class BanType {
-        private final String targetName;
-        private final String type; // perm, day, hour
-
-        public BanType(String targetName, String type) {
-            this.targetName = targetName;
-            this.type = type;
-        }
-
-        public String getTargetName() { return targetName; }
-        public String getType() { return type; }
+        return completions;
     }
 }

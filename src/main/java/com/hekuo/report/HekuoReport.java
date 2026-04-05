@@ -2,9 +2,9 @@ package com.hekuo.report;
 
 import com.hekuo.report.commands.ReportCommand;
 import com.hekuo.report.managers.ReportManager;
-import org.bukkit.plugin.java.JavaPlugin;
+import net.md_5.bungee.api.plugin.Plugin;
 
-public class HekuoReport extends JavaPlugin {
+public class HekuoReport extends Plugin {
 
     private static HekuoReport instance;
     private ReportManager reportManager;
@@ -14,12 +14,8 @@ public class HekuoReport extends JavaPlugin {
         instance = this;
         this.reportManager = new ReportManager(this);
 
-        getCommand("report").setExecutor(new ReportCommand(this));
-        getServer().getPluginManager().registerEvents(new ReportCommand(this), this);
-        
-        // Register activity tracker for anti-cheat detection
-        getServer().getPluginManager().registerEvents(
-            reportManager.getActivityTracker(), this);
+        // 注册举报命令
+        getProxy().getPluginManager().registerCommand(this, new ReportCommand(this, "report"));
 
         getLogger().info("hekuo举报插件已启用!");
     }

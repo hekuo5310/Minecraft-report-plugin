@@ -38,18 +38,19 @@ jobs:
         body: |
           ## hekuo举报插件 ${{ steps.get_version.outputs.VERSION }}
           
+          ### 插件类型: BungeeCord 代理端插件
+          
           ### 功能特性
           - 玩家举报系统 (`/report 玩家名称 理由`)
           - 管理员举报管理 (`/report check`)
           - 封禁系统：永久封禁、按天封禁、按时封禁
-          - 玩家行为日志查看，反作弊检测 (CPS/杀怪辅助/破坏加速)
-          - 举报列表和日志分页显示
-          - 异常数据自动标红警告
+          - 跨服举报通知，支持多子服务器
+          - 举报列表分页显示
           
           ### 安装方法
           1. 下载 `hekuo-report-${{ steps.get_version.outputs.VERSION }}.jar`
-          2. 放入服务器 `plugins` 文件夹
-          3. 重启或重载服务器
+          2. 放入 **BungeeCord** 的 `plugins` 文件夹 (不是子服务器的plugins!)
+          3. 重启或重载 BungeeCord
           
           ### 权限说明
           - `report.use` - 使用 /report 命令 (默认: 所有人)
@@ -59,8 +60,7 @@ jobs:
           - `/report <玩家> <理由>` - 举报玩家
           - `/report help` - 显示帮助信息
           - `/report check` - 查看举报列表 (管理员)
-          - `/report logs <玩家>` - 查看玩家行为和检测结果 (管理员)
-          - `/report ban <玩家> <perm|day|hour>` - 封禁玩家 (管理员)
+          - `/report ban perm|days|hours <玩家>` - 封禁玩家 (管理员)
           
           ---
           作者: **hekuo**

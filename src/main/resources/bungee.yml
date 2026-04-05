@@ -1,0 +1,21 @@
+name: hekuo举报插件
+version: ${project.version}
+main: com.hekuo.report.HekuoReport
+author: hekuo
+
+# BungeeCord 最低版本要求
+# 1.21 对应 BungeeCord API 1.21-R0.1-SNAPSHOT
+
+commands:
+  report:
+    description: 举报玩家 / 查看举报列表 / 管理员操作
+    usage: /report <玩家名称> <理由>
+    permission: report.use
+
+permissions:
+  report.use:
+    description: 允许使用举报命令
+    default: true
+  report.admin:
+    description: 管理员权限 - 可查看和处理举报
+    default: op
