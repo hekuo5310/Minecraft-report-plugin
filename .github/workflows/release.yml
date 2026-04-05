@@ -2,8 +2,9 @@ name: Build and Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
 
 jobs:
   build:
@@ -25,11 +26,25 @@ jobs:
     - name: Build with Maven
       run: mvn clean package -B
 
-    - name: Get version from tag
+    - name: Get version
       id: get_version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      run: |
+        if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          echo "IS_TAG=true" >> $GITHUB_OUTPUT
+        else
+          echo "VERSION=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+          echo "IS_TAG=false" >> $GITHUB_OUTPUT
+        fi
 
-    - name: Create Release
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: hekuo-report-${{ steps.get_version.outputs.VERSION }}
+        path: target/hekuo-report-*.jar
+
+    - name: Create Release (tags only)
+      if: steps.get_version.outputs.IS_TAG == 'true'
       uses: softprops/action-gh-release@v1
       with:
         name: Hekuo's Report ${{ steps.get_version.outputs.VERSION }}
@@ -40,7 +55,7 @@ jobs:
           - Player reporting system (`/report <player> <reason>`)
           - Admin report management (`/report check`)
           - Ban system with permanent, days, and hours options
-          - Activity log viewing for reported players
+          - Activity log viewing with anti-cheat detection (CPS/KillAura/Nuker)
           - Pagination support for reports and logs
           
           ### Installation
@@ -56,6 +71,8 @@ jobs:
           - `/report <player> <reason>` - Report a player
           - `/report help` - Show help
           - `/report check` - View reports (admin)
+          - `/report logs <player>` - View activity & detection results (admin)
+          - `/report ban <player> <perm|day|hour>` - Ban a player (admin)
           
           ---
           Developed by **hekuo**
