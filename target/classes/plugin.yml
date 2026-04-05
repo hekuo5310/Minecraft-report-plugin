@@ -1,24 +1,24 @@
-name: HekuoReport
+name: hekuo举报插件
 version: 1.0.0
 main: com.hekuo.report.HekuoReport
 author: hekuo
-description: A report plugin for Minecraft Bukkit servers
-api-version: '1.20'
+description: Minecraft Bukkit服务器举报插件
+api-version: '1.21'
 
 commands:
   report:
-    description: Report a player or manage reports
+    description: 举报玩家或管理举报
     usage: |
-      /report <player> <reason> - Report a player
-      /report help - Show help information
-      /report check - Check reports (admin only)
+      /report <玩家> <理由> - 举报玩家
+      /report help - 显示帮助信息
+      /report check - 查看举报 (仅管理员)
     permission: report.use
-    permission-message: You do not have permission to use this command.
+    permission-message: 你没有权限使用此命令
 
 permissions:
   report.use:
-    description: Allows players to use /report command
+    description: 允许使用/report命令
     default: true
   report.admin:
-    description: Allows admins to check and handle reports
+    description: 允许查看和处理举报
     default: op

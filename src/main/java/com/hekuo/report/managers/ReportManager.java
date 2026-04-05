@@ -45,7 +45,7 @@ public class ReportManager {
             try {
                 reportFile.createNewFile();
             } catch (IOException e) {
-                plugin.getLogger().log(Level.SEVERE, "Could not create reports.yml!", e);
+                plugin.getLogger().log(Level.SEVERE, "无法创建 reports.yml 文件!", e);
             }
         }
         reportConfig = YamlConfiguration.loadConfiguration(reportFile);
@@ -60,7 +60,7 @@ public class ReportManager {
         try {
             reportConfig.save(reportFile);
         } catch (IOException e) {
-            plugin.getLogger().log(Level.SEVERE, "Could not save reports.yml!", e);
+            plugin.getLogger().log(Level.SEVERE, "无法保存 reports.yml 文件!", e);
         }
     }
 
@@ -81,7 +81,7 @@ public class ReportManager {
         List<Map<String, Object>> unhandledReports = getUnhandledReports();
         
         if (unhandledReports.isEmpty()) {
-            sender.sendMessage(ChatColor.YELLOW + "No pending reports at this time.");
+            sender.sendMessage(ChatColor.YELLOW + "当前没有待处理的举报");
             return;
         }
 
@@ -93,7 +93,7 @@ public class ReportManager {
         int toIndex = Math.min(fromIndex + pageSize, unhandledReports.size());
         List<Map<String, Object>> pageReports = unhandledReports.subList(fromIndex, toIndex);
 
-        sender.sendMessage(ChatColor.GOLD + "=== " + ChatColor.BOLD + "Reports" + 
+        sender.sendMessage(ChatColor.GOLD + "=== " + ChatColor.BOLD + "举报列表" + 
                           ChatColor.GOLD + " (" + (page + 1) + "/" + totalPages + ") ===");
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -109,26 +109,26 @@ public class ReportManager {
 
             TextComponent line = new TextComponent(
                 ChatColor.GRAY + "[" + index + "] " +
-                ChatColor.RED + "Target: " + ChatColor.YELLOW + target + "  " +
-                ChatColor.BLUE + "Reporter: " + ChatColor.YELLOW + reporter + "  " +
-                ChatColor.GREEN + "Reason: " + ChatColor.WHITE + reason + "\n" +
-                ChatColor.GRAY + "   Time: " + sdf.format(new Date(timestamp))
+                ChatColor.RED + "被举报人: " + ChatColor.YELLOW + target + "  " +
+                ChatColor.BLUE + "举报人: " + ChatColor.YELLOW + reporter + "  " +
+                ChatColor.GREEN + "理由: " + ChatColor.WHITE + reason + "\n" +
+                ChatColor.GRAY + "   时间: " + sdf.format(new Date(timestamp))
             );
 
-            TextComponent logsBtn = new TextComponent("[View Logs]");
+            TextComponent logsBtn = new TextComponent("[查看日志]");
             logsBtn.setColor(net.md_5.bungee.api.ChatColor.AQUA);
             logsBtn.setBold(true);
             logsBtn.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
-                new ComponentBuilder("Click to view player's recent activity and detection results").create()));
+                new ComponentBuilder("点击查看玩家近期行为和检测结果").create()));
             logsBtn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, 
                 "/report logs " + target));
             line.addExtra(new TextComponent("\n" + ChatColor.GRAY + "   "));
             line.addExtra(logsBtn);
 
-            // Ban buttons
-            TextComponent permBan = createBanButton("[Perm Ban]", "perm", target, net.md_5.bungee.api.ChatColor.RED);
-            TextComponent dayBan = createBanButton("[Ban Days]", "day", target, net.md_5.bungee.api.ChatColor.GOLD);
-            TextComponent hourBan = createBanButton("[Ban Hours]", "hour", target, net.md_5.bungee.api.ChatColor.YELLOW);
+            // 封禁按钮
+            TextComponent permBan = createBanButton("[永久封禁]", "perm", target, net.md_5.bungee.api.ChatColor.RED);
+            TextComponent dayBan = createBanButton("[封禁天数]", "day", target, net.md_5.bungee.api.ChatColor.GOLD);
+            TextComponent hourBan = createBanButton("[封禁小时]", "hour", target, net.md_5.bungee.api.ChatColor.YELLOW);
 
             line.addExtra(new TextComponent("  "));
             line.addExtra(permBan);
@@ -145,25 +145,25 @@ public class ReportManager {
             sender.sendMessage("");
         }
 
-        // Pagination buttons
+        // 分页按钮
         TextComponent pagination = new TextComponent("");
         if (page > 0) {
-            TextComponent prevBtn = new TextComponent("[<< Prev]");
+            TextComponent prevBtn = new TextComponent("[<< 上一页]");
             prevBtn.setColor(net.md_5.bungee.api.ChatColor.GREEN);
             prevBtn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/report page " + (page - 1)));
             prevBtn.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
-                new ComponentBuilder("Go to previous page").create()));
+                new ComponentBuilder("跳转到上一页").create()));
             pagination.addExtra(prevBtn);
         }
         if (page > 0 && page < totalPages - 1) {
             pagination.addExtra(new TextComponent("     "));
         }
         if (page < totalPages - 1) {
-            TextComponent nextBtn = new TextComponent("[Next >>]");
+            TextComponent nextBtn = new TextComponent("[下一页 >>]");
             nextBtn.setColor(net.md_5.bungee.api.ChatColor.GREEN);
             nextBtn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/report page " + (page + 1)));
             nextBtn.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
-                new ComponentBuilder("Go to next page").create()));
+                new ComponentBuilder("跳转到下一页").create()));
             pagination.addExtra(nextBtn);
         }
         
@@ -173,58 +173,56 @@ public class ReportManager {
     }
 
     /**
-     * Show player activity logs with algorithm detection results
-     * Displays attack data, CPS, mining, and flags suspicious behavior in RED
+     * 显示玩家活动日志和算法检测结果
+     * 显示攻击数据、CPS、挖掘等，异常数据标红
      */
     public void showLogs(CommandSender sender, String playerName, int logPage) {
-        final int LOG_PAGE_SIZE = 10; // Events per page
+        final int LOG_PAGE_SIZE = 10; // 每页事件数
         
         Player target = Bukkit.getPlayerExact(playerName);
         if (target == null || !target.isOnline()) {
-            sender.sendMessage(ChatColor.RED + "Player " + playerName + " is not online.");
+            sender.sendMessage(ChatColor.RED + "玩家 " + playerName + " 不在线");
             return;
         }
 
         PlayerActivityTracker.PlayerActivityData data = activityTracker.getPlayerData(target.getUniqueId());
         if (data == null) {
-            sender.sendMessage(ChatColor.RED + "No activity data available for " + playerName);
+            sender.sendMessage(ChatColor.RED + "暂无 " + playerName + " 的活动数据");
             return;
         }
 
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-        long currentTime = System.currentTimeMillis();
-        long windowStart = currentTime - (5 * 60 * 1000); // 5 minutes before report
 
-        // === Header ===
+        // === 标题 ===
         sender.sendMessage("");
-        sender.sendMessage(ChatColor.GOLD + "========== " + ChatColor.BOLD + "ACTIVITY LOG" + 
+        sender.sendMessage(ChatColor.GOLD + "========== " + ChatColor.BOLD + "玩家活动日志" + 
                           ChatColor.GOLD + " ==========");
-        sender.sendMessage(ChatColor.WHITE + "  Player: " + ChatColor.YELLOW + playerName + 
-                          ChatColor.GRAY + " | Window: +/- 5 minutes from report time");
+        sender.sendMessage(ChatColor.WHITE + "  玩家: " + ChatColor.YELLOW + playerName + 
+                          ChatColor.GRAY + " | 查看范围: 举报时间前后5分钟");
         sender.sendMessage("");
 
-        // === ALGORITHM DETECTION RESULTS (Top priority - flagged items in RED) ===
+        // === 算法检测结果 (标红显示异常项) ===
         sender.sendMessage(ChatColor.DARK_RED + "" + ChatColor.STRIKETHROUGH + 
                           "--------------------" + ChatColor.RESET + 
-                          ChatColor.RED + " [ DETECTION RESULTS ] " + 
+                          ChatColor.RED + " [ 检测结果 ] " + 
                           ChatColor.DARK_RED + "" + ChatColor.STRIKETHROUGH + "--------------------");
         
         if (!data.detections.isEmpty()) {
             for (PlayerActivityTracker.DetectionResult detection : data.detections) {
                 if (detection.isFlagged) {
-                    // FLAGGED - Show in RED
+                    // 标记为异常 - 红色显示
                     sender.sendMessage("");
-                    sender.sendMessage(ChatColor.RED + "  [" + ChatColor.BOLD + "!! FLAGGED !! " + 
+                    sender.sendMessage(ChatColor.RED + "  [" + ChatColor.BOLD + "!! 警告 !! " + 
                                      ChatColor.RED + "] " + detection.category);
-                    sender.sendMessage(ChatColor.RED + "  Severity: " + ChatColor.DARK_RED + 
+                    sender.sendMessage(ChatColor.RED + "  级别: " + ChatColor.DARK_RED + 
                                      ChatColor.BOLD + detection.severity);
-                    sender.sendMessage(ChatColor.RED + "  Value: " + ChatColor.WHITE + detection.value);
-                    sender.sendMessage(ChatColor.RED + "  Details: " + ChatColor.GRAY + detection.description);
+                    sender.sendMessage(ChatColor.RED + "  数值: " + ChatColor.WHITE + detection.value);
+                    sender.sendMessage(ChatColor.RED + "  说明: " + ChatColor.GRAY + detection.description);
                     
-                    // Visual warning indicator
+                    // 警告提示（可点击直接封禁）
                     TextComponent warning = new TextComponent(
                         "\n  " + ChatColor.DARK_RED + ">>> " + 
-                        ChatColor.RED + "REQUIRES ADMIN ATTENTION" + 
+                        ChatColor.RED + "需要管理员处理" + 
                         ChatColor.DARK_RED + " <<<"
                     );
                     warning.setColor(net.md_5.bungee.api.ChatColor.RED);
@@ -233,58 +231,58 @@ public class ReportManager {
                         warning.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, 
                             "/report ban " + playerName + " perm"));
                         warning.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                            new ComponentBuilder("Click to permanently ban this player").create()));
+                            new ComponentBuilder("点击永久封禁此玩家").create()));
                         ((Player) sender).spigot().sendMessage(warning);
                     } else {
                         sender.sendMessage(warning.toPlainText());
                     }
                 } else {
-                    // Suspicious but not flagged - show in YELLOW
+                    // 可疑但未标记 - 黄色显示
                     sender.sendMessage("");
                     sender.sendMessage(ChatColor.YELLOW + "  [!] " + detection.category);
-                    sender.sendMessage(ChatColor.YELLOW + "  Severity: " + ChatColor.GOLD + detection.severity);
-                    sender.sendMessage(ChatColor.YELLOW + "  Value: " + ChatColor.WHITE + detection.value);
-                    sender.sendMessage(ChatColor.YELLOW + "  Details: " + ChatColor.GRAY + detection.description);
+                    sender.sendMessage(ChatColor.YELLOW + "  级别: " + ChatColor.GOLD + detection.severity);
+                    sender.sendMessage(ChatColor.YELLOW + "  数值: " + ChatColor.WHITE + detection.value);
+                    sender.sendMessage(ChatColor.YELLOW + "  说明: " + ChatColor.GRAY + detection.description);
                 }
             }
         } else {
-            sender.sendMessage(ChatColor.GREEN + "  No suspicious activity detected.");
+            sender.sendMessage(ChatColor.GREEN + "  未检测到可疑行为");
         }
         sender.sendMessage("");
 
-        // === COMBAT STATISTICS ===
+        // === 战斗数据 ===
         sender.sendMessage(ChatColor.DARK_BLUE + "" + ChatColor.STRIKETHROUGH + 
                           "--------------------" + ChatColor.RESET + 
-                          ChatColor.BLUE + " [ COMBAT DATA ] " + 
+                          ChatColor.BLUE + " [ 战斗数据 ] " + 
                           ChatColor.DARK_BLUE + "" + ChatColor.STRIKETHROUGH + "--------------------");
         
-        // CPS Display with color coding based on threshold
+        // CPS 显示，根据阈值变色
         String cpsDisplay;
         if (data.currentCPS >= PlayerActivityTracker.EXTREME_CPS_THRESHOLD) {
             cpsDisplay = ChatColor.RED + "" + ChatColor.BOLD + data.currentCPS + 
-                        " CPS (EXTREME - Autoclicker detected!)";
+                        " CPS (极高 - 可能使用自动点击器!)";
         } else if (data.currentCPS >= PlayerActivityTracker.HIGH_CPS_THRESHOLD) {
             cpsDisplay = ChatColor.YELLOW + "" + data.currentCPS + 
-                        " CPS (High - Possible autoclicker)";
+                        " CPS (较高 - 可能使用自动点击器)";
         } else {
-            cpsDisplay = ChatColor.GREEN + "" + data.currentCPS + " CPS (Normal)";
+            cpsDisplay = ChatColor.GREEN + "" + data.currentCPS + " CPS (正常)";
         }
-        sender.sendMessage(ChatColor.AQUA + "  Click Rate: " + cpsDisplay);
+        sender.sendMessage(ChatColor.AQUA + "  点击频率(CPS): " + cpsDisplay);
 
-        // Attack rate display
+        // 攻击频率显示
         String attackDisplay;
         if (data.currentAttackRate > PlayerActivityTracker.ATTACK_THRESHOLD) {
             attackDisplay = ChatColor.RED + "" + ChatColor.BOLD + 
-                           data.currentAttackRate + " attacks/5s (ABNORMAL)";
+                           data.currentAttackRate + " 次/5秒 (异常!)";
         } else {
-            attackDisplay = ChatColor.GREEN + "" + data.currentAttackRate + " attacks/5s";
+            attackDisplay = ChatColor.GREEN + "" + data.currentAttackRate + " 次/5秒";
         }
-        sender.sendMessage(ChatColor.AQUA + "  Attack Rate: " + attackDisplay);
+        sender.sendMessage(ChatColor.AQUA + "  攻击频率: " + attackDisplay);
 
-        // Recent attack log (paginated)
-        sender.sendMessage(ChatColor.AQUA + "  Recent Attacks:");
+        // 近期攻击记录(分页)
+        sender.sendMessage(ChatColor.AQUA + "  近期攻击记录:");
         List<PlayerActivityTracker.ActivityEvent> recentAttacks = new ArrayList<>(data.attackEvents);
-        Collections.reverse(recentAttacks); // Most recent first
+        Collections.reverse(recentAttacks); // 最新的在前
         
         int fromIdx = logPage * LOG_PAGE_SIZE;
         int toIdx = Math.min(fromIdx + LOG_PAGE_SIZE, recentAttacks.size());
@@ -303,29 +301,29 @@ public class ReportManager {
                              ChatColor.DARK_GRAY + " " + event.location);
         }
         
-        // Attack log pagination
+        // 攻击记录分页
         showLogPagination(sender, recentAttacks.size(), logPage, totalAttackPages, 
                          "attack", playerName, LOG_PAGE_SIZE);
 
-        // === MINING DATA ===
+        // === 挖掘数据 ===
         sender.sendMessage("");
         sender.sendMessage(ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + 
                           "--------------------" + ChatColor.RESET + 
-                          ChatColor.GREEN + " [ MINING DATA ] " + 
+                          ChatColor.GREEN + " [ 挖掘数据 ] " + 
                           ChatColor.DARK_GREEN + "" + ChatColor.STRIKETHROUGH + "--------------------");
 
-        // Mining rate display
+        // 挖掘频率显示
         String miningDisplay;
         if (data.currentMiningRate > PlayerActivityTracker.MINING_THRESHOLD) {
             miningDisplay = ChatColor.RED + "" + ChatColor.BOLD + 
-                           data.currentMiningRate + " blocks/5s (ABNORMAL - Nuker suspected!)";
+                           data.currentMiningRate + " 块/5秒 (异常 - 可能使用破坏加速!)";
         } else {
-            miningDisplay = ChatColor.GREEN + "" + data.currentMiningRate + " blocks/5s";
+            miningDisplay = ChatColor.GREEN + "" + data.currentMiningRate + " 块/5秒";
         }
-        sender.sendMessage(ChatColor.AQUA + "  Mining Rate: " + miningDisplay);
+        sender.sendMessage(ChatColor.AQUA + "  挖掘速度: " + miningDisplay);
 
-        // Recent mining log
-        sender.sendMessage(ChatColor.AQUA + "  Recent Blocks Broken:");
+        // 近期挖掘记录
+        sender.sendMessage(ChatColor.AQUA + "  近期破坏方块:");
         List<PlayerActivityTracker.ActivityEvent> recentMining = new ArrayList<>(data.miningEvents);
         Collections.reverse(recentMining);
         
@@ -345,16 +343,16 @@ public class ReportManager {
                              ChatColor.DARK_GRAY + " " + event.location);
         }
         
-        // Mining log pagination
+        // 挖掘记录分页
         showLogPagination(sender, recentMining.size(), logPage, totalMiningPages, 
                          "mine", playerName, LOG_PAGE_SIZE);
 
-        // === SUSPICIOUS MOVEMENTS ===
+        // === 异常移动 ===
         if (!data.suspiciousEvents.isEmpty()) {
             sender.sendMessage("");
             sender.sendMessage(ChatColor.DARK_RED + "" + ChatColor.STRIKETHROUGH + 
                               "--------------------" + ChatColor.RESET + 
-                              ChatColor.RED + " [ SUSPICIOUS MOVEMENTS ] " + 
+                              ChatColor.RED + " [ 异常移动 ] " + 
                               ChatColor.DARK_RED + "" + ChatColor.STRIKETHROUGH + "--------------------");
             
             List<PlayerActivityTracker.ActivityEvent> recentSuspicious = new ArrayList<>(data.suspiciousEvents);
@@ -363,7 +361,7 @@ public class ReportManager {
             fromIdx = logPage * LOG_PAGE_SIZE;
             toIdx = Math.min(fromIdx + LOG_PAGE_SIZE, recentSuspicious.size());
             
-            for (int i = fromIdx; i < toIdx && i < 20; i++) { // Limit to last 20 suspicious events
+            for (int i = fromIdx; i < toIdx && i < 20; i++) { // 只显示最近20条
                 PlayerActivityTracker.ActivityEvent event = recentSuspicious.get(i);
                 sender.sendMessage(ChatColor.RED + "    " + sdf.format(new Date(event.timestamp)) + 
                                  " -> " + ChatColor.BOLD + event.target + 
@@ -372,16 +370,16 @@ public class ReportManager {
             }
         }
 
-        // === Footer with quick actions ===
+        // === 底部快捷操作 ===
         sender.sendMessage("");
         sender.sendMessage(ChatColor.GRAY + "----------");
         
         TextComponent footer = new TextComponent("");
-        TextComponent backToReports = new TextComponent("[Back to Reports]");
+        TextComponent backToReports = new TextComponent("[返回举报列表]");
         backToReports.setColor(net.md_5.bungee.api.ChatColor.GOLD);
         backToReports.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/report check"));
         backToReports.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
-            new ComponentBuilder("Return to reports list").create()));
+            new ComponentBuilder("返回举报列表").create()));
         footer.addExtra(backToReports);
         
         if (sender instanceof Player) {
@@ -394,11 +392,10 @@ public class ReportManager {
                                    int totalPages, String logType, String playerName, int pageSize) {
         if (totalPages <= 1) return;
         
-        TextComponent pagination = new TextComponent(ChatColor.GRAY + "  Page " + (currentPage + 1) + 
-                                                     "/" + totalPages + ": ");
+        TextComponent pagination = new TextComponent(ChatColor.GRAY + "  第 " + (currentPage + 1) + " / " + totalPages + " 页: ");
         
         if (currentPage > 0) {
-            TextComponent prevBtn = new TextComponent("[Prev]");
+            TextComponent prevBtn = new TextComponent("[上一页]");
             prevBtn.setColor(net.md_5.bungee.api.ChatColor.AQUA);
             prevBtn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, 
                 "/report " + logType + "page " + playerName + " " + (currentPage - 1)));
@@ -407,7 +404,7 @@ public class ReportManager {
         
         if (currentPage < totalPages - 1) {
             pagination.addExtra(new TextComponent(" "));
-            TextComponent nextBtn = new TextComponent("[Next]");
+            TextComponent nextBtn = new TextComponent("[下一页]");
             nextBtn.setColor(net.md_5.bungee.api.ChatColor.AQUA);
             nextBtn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, 
                 "/report " + logType + "page " + playerName + " " + (currentPage + 1)));
@@ -423,8 +420,8 @@ public class ReportManager {
         TextComponent btn = new TextComponent(text);
         btn.setColor(color);
         btn.setBold(false);
-        String hoverText = type.equals("perm") ? "Permanently ban this player" : 
-                          "Ban this player in " + type + "(s)";
+        String hoverText = type.equals("perm") ? "永久封禁此玩家" : 
+                          "封禁此玩家 " + type + "(单位)";
         btn.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
             new ComponentBuilder(hoverText).create()));
         btn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, 
@@ -446,24 +443,24 @@ public class ReportManager {
         String message;
         switch (banType.toLowerCase()) {
             case "perm":
-                message = ChatColor.RED + "Enter confirmation or type 'cancel' to abort permanent ban for " + 
-                         ChatColor.YELLOW + targetName;
+                message = ChatColor.RED + "输入确认或输入 取消 中止对 " + 
+                         ChatColor.YELLOW + targetName + ChatColor.RED + " 的永久封禁";
                 break;
             case "day":
-                message = ChatColor.GOLD + "Enter number of days to ban " + ChatColor.YELLOW + targetName + 
-                         ChatColor.GOLD + " (or 'cancel'):";
+                message = ChatColor.GOLD + "输入封禁天数来封禁 " + ChatColor.YELLOW + targetName + 
+                         ChatColor.GOLD + " (或 输入 取消):";
                 break;
             case "hour":
-                message = ChatColor.YELLOW + "Enter number of hours to ban " + ChatColor.YELLOW + targetName + 
-                         ChatColor.YELLOW + " (or 'cancel'):";
+                message = ChatColor.YELLOW + "输入封禁小时数来封禁 " + ChatColor.YELLOW + targetName + 
+                         ChatColor.YELLOW + " (或 输入 取消):";
                 break;
             default:
-                admin.sendMessage(ChatColor.RED + "Invalid ban type.");
+                admin.sendMessage(ChatColor.RED + "无效的封禁类型");
                 return;
         }
         
         admin.sendMessage(message);
-        admin.sendMessage(ChatColor.GRAY + "Type in chat to continue...");
+        admin.sendMessage(ChatColor.GRAY + "在聊天框中输入以继续...");
         
         ReportCommand mainCommand = (ReportCommand) plugin.getCommand("report").getExecutor();
         mainCommand.addPendingBan(admin.getUniqueId(), new ReportCommand.BanType(targetName, banType));

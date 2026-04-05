@@ -21,7 +21,7 @@ public class HekuoReport extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
             reportManager.getActivityTracker(), this);
 
-        getLogger().info("Hekuo's Report plugin has been enabled!");
+        getLogger().info("hekuo举报插件已启用!");
     }
 
     @Override
@@ -29,7 +29,7 @@ public class HekuoReport extends JavaPlugin {
         if (reportManager != null) {
             reportManager.saveReports();
         }
-        getLogger().info("Hekuo's Report plugin has been disabled!");
+        getLogger().info("hekuo举报插件已禁用!");
     }
 
     public static HekuoReport getInstance() {

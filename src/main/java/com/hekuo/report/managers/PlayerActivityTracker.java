@@ -166,60 +166,60 @@ public class PlayerActivityTracker implements Listener {
         Player player = Bukkit.getPlayer(playerUuid);
         if (player == null) return;
         
-        // Check CPS - Autoclicker detection
+        // 检查CPS - 自动点击器检测
         if (data.currentCPS >= EXTREME_CPS_THRESHOLD) {
             data.detections.add(new DetectionResult(
-                "AUTOCLICKER",
-                "EXTREME",
-                "CPS: " + data.currentCPS + " (threshold: " + EXTREME_CPS_THRESHOLD + ")",
-                "Extremely high click rate detected. Likely using autoclicker.",
+                "自动点击器",
+                "极高",
+                "CPS: " + data.currentCPS + " (阈值: " + EXTREME_CPS_THRESHOLD + ")",
+                "点击频率极高，极可能使用自动点击器",
                 true
             ));
         } else if (data.currentCPS >= HIGH_CPS_THRESHOLD) {
             data.detections.add(new DetectionResult(
-                "AUTOCLICKER",
-                "SUSPICIOUS",
-                "CPS: " + data.currentCPS + " (threshold: " + HIGH_CPS_THRESHOLD + ")",
-                "High click rate detected. May be using autoclicker.",
+                "自动点击器",
+                "可疑",
+                "CPS: " + data.currentCPS + " (阈值: " + HIGH_CPS_THRESHOLD + ")",
+                "点击频率较高，可能使用自动点击器",
                 false
             ));
         }
         
-        // Check attacks - Kill Aura detection
+        // 检查攻击 - 杀怪辅助检测
         if (data.currentAttackRate > ATTACK_THRESHOLD) {
             data.detections.add(new DetectionResult(
-                "KILL_AURA",
-                "DETECTED",
-                "Attacks/5s: " + data.currentAttackRate,
-                "Abnormal attack frequency. Possible kill aura or combat hacks.",
+                "杀怪辅助",
+                "已检测",
+                "攻击频率: " + data.currentAttackRate + "次/5秒",
+                "攻击频率异常，可能使用杀怪辅助或战斗作弊",
                 true
             ));
         }
         
-        // Check mining - Nuker detection
+        // 检查挖掘 - 破坏加速检测
         if (data.currentMiningRate > MINING_THRESHOLD) {
             data.detections.add(new DetectionResult(
-                "NUKER",
-                "DETECTED",
-                "Blocks/5s: " + data.currentMiningRate,
-                "Abnormal block breaking rate. Possible nuke/mining hack.",
+                "破坏加速",
+                "已检测",
+                "挖掘速度: " + data.currentMiningRate + "块/5秒",
+                "方块破坏速度异常，可能使用破坏加速或挖矿作弊",
                 true
             ));
         }
         
-        // Check suspicious movement events
+        // 检查异常移动事件
         List<ActivityEvent> recentSuspicious = new ArrayList<>();
         for (ActivityEvent event : data.suspiciousEvents) {
-            if (event.timestamp >= currentTime - 15000) { // Last 15 seconds
+            if (event.timestamp >= currentTime - 15000) { // 最近15秒
                 recentSuspicious.add(event);
             }
         }
         if (recentSuspicious.size() >= 3) {
             data.detections.add(new DetectionResult(
-                "SPEED_FLY",
-                "DETECTED",
-                "Teleports in 15s: " + recentSuspicious.size(),
-                "Multiple teleport-like movements detected. Possible speed/fly hacks.",
+                "速飞作弊",
+                "已检测",
+                "15秒内瞬移次数: " + recentSuspicious.size(),
+                "检测到多次类似瞬移的移动，可能使用速度或飞行作弊",
                 true
             ));
         }

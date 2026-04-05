@@ -1,4 +1,4 @@
-name: Build and Release
+name: 构建与发布
 
 on:
   push:
@@ -12,57 +12,58 @@ jobs:
       contents: write
 
     steps:
-    - name: Checkout code
+    - name: 检出代码
       uses: actions/checkout@v4
 
-    - name: Set up JDK 21
+    - name: 配置 JDK 21
       uses: actions/setup-java@v4
       with:
         java-version: '21'
         distribution: 'temurin'
         cache: maven
 
-    - name: Get version
+    - name: 获取版本号
       id: get_version
       run: |
         echo "VERSION=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
-    - name: Build with Maven
+    - name: Maven 构建
       run: mvn clean package -B
 
-    - name: Create Release
+    - name: 创建发布
       uses: softprops/action-gh-release@v1
       with:
-        name: Hekuo's Report ${{ steps.get_version.outputs.VERSION }}
-        tag_name: v${{ steps.get_version.outputs.VERSION }}
+        name: hekuo举报插件 ${{ steps.get_version.outputs.VERSION }}
+        tag_name: ${{ steps.get_version.outputs.VERSION }}
         body: |
-          ## Hekuo's Report ${{ steps.get_version.outputs.VERSION }}
+          ## hekuo举报插件 ${{ steps.get_version.outputs.VERSION }}
           
-          ### Features
-          - Player reporting system (`/report <player> <reason>`)
-          - Admin report management (`/report check`)
-          - Ban system with permanent, days, and hours options
-          - Activity log viewing with anti-cheat detection (CPS/KillAura/Nuker)
-          - Pagination support for reports and logs
+          ### 功能特性
+          - 玩家举报系统 (`/report 玩家名称 理由`)
+          - 管理员举报管理 (`/report check`)
+          - 封禁系统：永久封禁、按天封禁、按时封禁
+          - 玩家行为日志查看，反作弊检测 (CPS/杀怪辅助/破坏加速)
+          - 举报列表和日志分页显示
+          - 异常数据自动标红警告
           
-          ### Installation
-          1. Download `hekuo-report-${{ steps.get_version.outputs.VERSION }}.jar`
-          2. Place in your server's `plugins` folder
-          3. Restart or reload the server
+          ### 安装方法
+          1. 下载 `hekuo-report-${{ steps.get_version.outputs.VERSION }}.jar`
+          2. 放入服务器 `plugins` 文件夹
+          3. 重启或重载服务器
           
-          ### Permissions
-          - `report.use` - Use /report command (default: true)
-          - `report.admin` - Admin commands (default: op)
+          ### 权限说明
+          - `report.use` - 使用 /report 命令 (默认: 所有人)
+          - `report.admin` - 管理员命令 (默认: OP)
           
-          ### Commands
-          - `/report <player> <reason>` - Report a player
-          - `/report help` - Show help
-          - `/report check` - View reports (admin)
-          - `/report logs <player>` - View activity & detection results (admin)
-          - `/report ban <player> <perm|day|hour>` - Ban a player (admin)
+          ### 命令列表
+          - `/report <玩家> <理由>` - 举报玩家
+          - `/report help` - 显示帮助信息
+          - `/report check` - 查看举报列表 (管理员)
+          - `/report logs <玩家>` - 查看玩家行为和检测结果 (管理员)
+          - `/report ban <玩家> <perm|day|hour>` - 封禁玩家 (管理员)
           
           ---
-          Developed by **hekuo**
+          作者: **hekuo**
         files: target/hekuo-report-*.jar
         draft: false
         prerelease: true
