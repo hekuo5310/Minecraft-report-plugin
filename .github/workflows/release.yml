@@ -3,7 +3,6 @@ name: Build and Release
 on:
   push:
     branches: [main]
-    tags: ['v*']
   workflow_dispatch:
 
 jobs:
@@ -23,33 +22,21 @@ jobs:
         distribution: 'temurin'
         cache: maven
 
-    - name: Build with Maven
-      run: mvn clean package -B
-
     - name: Get version
       id: get_version
       run: |
-        if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          echo "IS_TAG=true" >> $GITHUB_OUTPUT
-        else
-          echo "VERSION=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-          echo "IS_TAG=false" >> $GITHUB_OUTPUT
-        fi
+        echo "VERSION=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: hekuo-report-${{ steps.get_version.outputs.VERSION }}
-        path: target/hekuo-report-*.jar
+    - name: Build with Maven
+      run: mvn clean package -B
 
-    - name: Create Release (tags only)
-      if: steps.get_version.outputs.IS_TAG == 'true'
+    - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         name: Hekuo's Report ${{ steps.get_version.outputs.VERSION }}
+        tag_name: v${{ steps.get_version.outputs.VERSION }}
         body: |
-          ## Hekuo's Report v${{ steps.get_version.outputs.VERSION }}
+          ## Hekuo's Report ${{ steps.get_version.outputs.VERSION }}
           
           ### Features
           - Player reporting system (`/report <player> <reason>`)
@@ -76,8 +63,8 @@ jobs:
           
           ---
           Developed by **hekuo**
-        files: target/hekuo-report-${{ steps.get_version.outputs.VERSION }}.jar
+        files: target/hekuo-report-*.jar
         draft: false
-        prerelease: false
+        prerelease: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
