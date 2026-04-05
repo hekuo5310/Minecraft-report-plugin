@@ -1,0 +1,24 @@
+name: HekuoReport
+version: ${project.version}
+main: com.hekuo.report.HekuoReport
+author: hekuo
+description: A report plugin for Minecraft Bukkit servers
+api-version: '1.20'
+
+commands:
+  report:
+    description: Report a player or manage reports
+    usage: |
+      /report <player> <reason> - Report a player
+      /report help - Show help information
+      /report check - Check reports (admin only)
+    permission: report.use
+    permission-message: You do not have permission to use this command.
+
+permissions:
+  report.use:
+    description: Allows players to use /report command
+    default: true
+  report.admin:
+    description: Allows admins to check and handle reports
+    default: op
