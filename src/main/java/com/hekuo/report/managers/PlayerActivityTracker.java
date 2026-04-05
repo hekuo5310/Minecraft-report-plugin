@@ -1,13 +1,14 @@
 package com.hekuo.report.managers;
 
+import com.hekuo.report.HekuoReport;
 import org.bukkit.Bukkit;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerAnimationEvent;
+import org.bukkit.event.player.PlayerAnimationType;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -22,11 +23,11 @@ public class PlayerActivityTracker implements Listener {
     // Player UUID -> ActivityData
     private final Map<UUID, PlayerActivityData> playerActivities = new ConcurrentHashMap<>();
     
-    // Algorithm thresholds
-    private static final int HIGH_CPS_THRESHOLD = 16;        // CPS above this is suspicious (autoclicker)
-    private static final int EXTREME_CPS_THRESHOLD = 25;     // Very likely autoclicker
-    private static final int ATTACK_THRESHOLD = 8;           // Attacks per second threshold (killaura)
-    private static final int MINING_THRESHOLD = 12;          // Blocks broken per second (nuker)
+    // Algorithm thresholds (public for ReportManager access)
+    public static final int HIGH_CPS_THRESHOLD = 16;        // CPS above this is suspicious (autoclicker)
+    public static final int EXTREME_CPS_THRESHOLD = 25;     // Very likely autoclicker
+    public static final int ATTACK_THRESHOLD = 8;           // Attacks per second threshold (killaura)
+    public static final int MINING_THRESHOLD = 12;          // Blocks broken per second (nuker)
     private static final double TELEPORT_THRESHOLD = 50;     // Distance for teleport check (blocks)
 
     public PlayerActivityTracker(HekuoReport plugin) {
@@ -83,11 +84,15 @@ public class PlayerActivityTracker implements Listener {
 
     @EventHandler  
     public void onPlayerMove(PlayerMoveEvent event) {
-        if (!event.hasChangedPosition()) return;
+        // Check if player actually moved to a different block position
+        if (event.getFrom().getBlockX() == event.getTo().getBlockX() &&
+            event.getFrom().getBlockY() == event.getTo().getBlockY() &&
+            event.getFrom().getBlockZ() == event.getTo().getBlockZ()) return;
         
         Player player = event.getPlayer();
         PlayerActivityData data = getActivityData(player);
         long now = System.currentTimeMillis();
+        
         double distance = event.getFrom().distance(event.getTo());
         
         // Check for teleportation (possible speed/fly hack)

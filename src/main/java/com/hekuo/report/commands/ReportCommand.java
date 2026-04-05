@@ -1,12 +1,12 @@
 package com.hekuo.report.commands;
 
 import com.hekuo.report.HekuoReport;
-import com.hekuo.report.managers.ReportManager;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
+import org.bukkit.BanList;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -16,6 +16,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -256,60 +257,82 @@ public class ReportCommand implements CommandExecutor, Listener {
     }
 
     private void executeBan(Player admin, Player target, String type, long amount) {
+        String adminName = admin.getName();
+        String targetName = target.getName();
+        
         switch (type.toLowerCase()) {
-            case "perm":
-                target.banPlayer("You have been permanently banned.\nBanned by: " + admin.getName());
-                Bukkit.broadcast(ChatColor.RED + "[Ban] " + ChatColor.YELLOW + admin.getName() + 
-                                ChatColor.WHITE + " permanently banned " + ChatColor.RED + target.getName(), 
+            case "perm": {
+                // Permanent ban via BanList API
+                Bukkit.getBanList(BanList.Type.NAME).addBan(targetName,
+                    "Permanently banned by: " + adminName, null, adminName);
+                target.kickPlayer("You have been permanently banned.\nBanned by: " + adminName);
+                Bukkit.broadcast(ChatColor.RED + "[Ban] " + ChatColor.YELLOW + adminName + 
+                                ChatColor.WHITE + " permanently banned " + ChatColor.RED + targetName, 
                                 "report.admin");
                 break;
-            case "day":
-                target.banPlayer(java.time.Duration.ofDays(amount), 
-                    "You have been banned for " + amount + " day(s).\nBanned by: " + admin.getName());
-                Bukkit.broadcast(ChatColor.RED + "[Ban] " + ChatColor.YELLOW + admin.getName() + 
-                                ChatColor.WHITE + " banned " + ChatColor.RED + target.getName() + 
+            }
+            case "day": {
+                long expiryMs = System.currentTimeMillis() + (amount * 24 * 60 * 60 * 1000L);
+                Date expiryDate = new Date(expiryMs);
+                Bukkit.getBanList(BanList.Type.NAME).addBan(targetName,
+                    "Banned for " + amount + " day(s) by: " + adminName, expiryDate, adminName);
+                target.kickPlayer("You have been banned for " + amount + " day(s).\nBanned by: " + adminName);
+                Bukkit.broadcast(ChatColor.RED + "[Ban] " + ChatColor.YELLOW + adminName + 
+                                ChatColor.WHITE + " banned " + ChatColor.RED + targetName + 
                                 ChatColor.WHITE + " for " + amount + " day(s)", "report.admin");
                 break;
-            case "hour":
-                target.banPlayer(java.time.Duration.ofHours(amount), 
-                    "You have been banned for " + amount + " hour(s).\nBanned by: " + admin.getName());
-                Bukkit.broadcast(ChatColor.RED + "[Ban] " + ChatColor.YELLOW + admin.getName() + 
-                                ChatColor.WHITE + " banned " + ChatColor.RED + target.getName() + 
+            }
+            case "hour": {
+                long expiryMs = System.currentTimeMillis() + (amount * 60 * 60 * 1000L);
+                Date expiryDate = new Date(expiryMs);
+                Bukkit.getBanList(BanList.Type.NAME).addBan(targetName,
+                    "Banned for " + amount + " hour(s) by: " + adminName, expiryDate, adminName);
+                target.kickPlayer("You have been banned for " + amount + " hour(s).\nBanned by: " + adminName);
+                Bukkit.broadcast(ChatColor.RED + "[Ban] " + ChatColor.YELLOW + adminName + 
+                                ChatColor.WHITE + " banned " + ChatColor.RED + targetName + 
                                 ChatColor.WHITE + " for " + amount + " hour(s)", "report.admin");
                 break;
+            }
             default:
                 admin.sendMessage(ChatColor.RED + "Invalid ban type.");
+                return;
         }
         
         // Mark the report as handled
-        plugin.getReportManager().markHandled(0); // Simplified - in real impl would track specific report
+        plugin.getReportManager().markHandled(0);
     }
 
     private void offlineBan(Player admin, String targetName, String type, long amount) {
+        String adminName = admin.getName();
+        
         switch (type.toLowerCase()) {
             case "perm":
-                Bukkit.getBanList(org.bukkit.BanList.Type.NAME).addBan(targetName, 
-                    "Permanently banned by: " + admin.getName(), null, admin.getName());
-                Bukkit.broadcast(ChatColor.RED + "[Ban] " + ChatColor.YELLOW + admin.getName() + 
+                Bukkit.getBanList(BanList.Type.NAME).addBan(targetName, 
+                    "Permanently banned by: " + adminName, null, adminName);
+                Bukkit.broadcast(ChatColor.RED + "[Ban] " + ChatColor.YELLOW + adminName + 
                                 ChatColor.WHITE + " permanently banned " + ChatColor.RED + targetName + 
                                 ChatColor.WHITE + " (offline)", "report.admin");
                 break;
-            case "day":
-                Bukkit.getBanList(org.bukkit.BanList.Type.NAME).addBan(targetName, 
-                    "Banned for " + amount + " day(s) by: " + admin.getName(), 
-                    java.util.Date.from(java.time.Instant.now().plusDays(amount)), admin.getName());
-                Bukkit.broadcast(ChatColor.RED + "[Ban] " + ChatColor.YELLOW + admin.getName() + 
+            case "day": {
+                long expiryMs = System.currentTimeMillis() + (amount * 24 * 60 * 60 * 1000L);
+                Date expiryDate = new Date(expiryMs);
+                Bukkit.getBanList(BanList.Type.NAME).addBan(targetName, 
+                    "Banned for " + amount + " day(s) by: " + adminName, expiryDate, adminName);
+                Bukkit.broadcast(ChatColor.RED + "[Ban] " + ChatColor.YELLOW + adminName + 
                                 ChatColor.WHITE + " banned " + ChatColor.RED + targetName + 
                                 ChatColor.WHITE + " for " + amount + " days (offline)", "report.admin");
                 break;
-            case "hour":
-                Bukkit.getBanList(org.bukkit.BanList.Type.NAME).addBan(targetName, 
-                    "Banned for " + amount + " hour(s) by: " + admin.getName(), 
-                    java.util.Date.from(java.time.Instant.now().plusHours(amount)), admin.getName());
-                Bukkit.broadcast(ChatColor.RED + "[Ban] " + ChatColor.YELLOW + admin.getName() + 
+            }
+            case "hour": {
+                long expiryMs = System.currentTimeMillis() + (amount * 60 * 60 * 1000L);
+                Date expiryDate = new Date(expiryMs);
+                Bukkit.getBanList(BanList.Type.NAME).addBan(targetName, 
+                    "Banned for " + amount + " hour(s) by: " + adminName, expiryDate, adminName);
+                Bukkit.broadcast(ChatColor.RED + "[Ban] " + ChatColor.YELLOW + adminName + 
                                 ChatColor.WHITE + " banned " + ChatColor.RED + targetName + 
                                 ChatColor.WHITE + " for " + amount + " hours (offline)", "report.admin");
                 break;
+            }
             default:
                 admin.sendMessage(ChatColor.RED + "Invalid ban type.");
                 return;
