@@ -296,7 +296,7 @@ public class PlayerActivityTracker implements Listener {
         public final String category;     // AUTOCLICKER, KILL_AURA, etc.
         public final String severity;     // DETECTED, SUSPICIOUS, EXTREME
         public final String value;        // Actual measured value
-        public final String description;  Human-readable explanation
+        public final String description;  // Human-readable explanation
         public final boolean isFlagged;   // True if should be highlighted red
 
         public DetectionResult(String category, String severity, String value, String description, boolean isFlagged) {
